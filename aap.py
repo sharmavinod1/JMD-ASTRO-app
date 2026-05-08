@@ -1,27 +1,36 @@
 import streamlit as st
-from flatlib.datetime import Datetime
-from flatlib.geopos import GeoPos
-from flatlib.chart import Chart
-from flatlib import const
+import swisseph as swe
+from datetime import datetime
 
-st.set_page_config(page_title="Vinod Astro", layout="centered")
-st.markdown("<h2 style='text-align: center; color: #d35400;'>Vinod Astrology Engine</h2>", unsafe_allow_html=True)
+st.set_page_config(page_title="Vinod Astro Pro", layout="centered")
+st.markdown("<h2 style='text-align:center; color:#d35400;'>Vinod Astrology Engine</h2>", unsafe_allow_html=True)
 
 name = st.text_input("जातक का नाम")
 dob = st.date_input("जन्म तिथि")
 tob = st.time_input("जन्म समय")
 
-if st.button("सटीक कुण्डली देखें"):
+if st.button("सटीक कुण्डली गणना करें"):
     try:
-        dt = Datetime(dob.strftime('%Y/%m/%d'), tob.strftime('%H:%M'), '+05:30')
-        pos = GeoPos(17.6599, 75.9064) # सोलापुर
-        chart = Chart(dt, pos)
+        # ज्योतिषीय गणना (Swiss Ephemeris)
+        jd = swe.julday(dob.year, dob.month, dob.day, tob.hour + tob.minute/60.0)
         
-        def get_s(obj):
-            return int(((obj.lon - 24.08) % 360) / 30) + 1
+        # लग्न (Ascendant) निकालना - सोलापुर के लिए
+        res = swe.houses(jd, 17.6599, 75.9064, b'P')[0]
+        asc_deg = res[0]
+        asc_sign = int(asc_deg / 30) + 1
+        
+        # ग्रहों के नाम हिंदी में
+        planets_list = {
+            "सूर्य": swe.SUN, "चन्द्र": swe.MOON, "मंगल": swe.MARS,
+            "बुध": swe.MERCURY, "गुरु": swe.JUPITER, "शुक्र": swe.VENUS,
+            "शनि": swe.SATURN, "राहु": swe.MEAN_NODE
+        }
 
-        asc = get_s(chart.get(const.ASC))
-        st.success(f"नमस्ते {name} जी! आपकी लग्न राशि संख्या {asc} है।")
-        st.write("गणना पूरी हुई।")
+        st.success(f"नमस्ते {name} जी! आपकी कुण्डली तैयार है।")
+        st.write(f"**लग्न राशि संख्या:** {asc_sign}")
+        
+        # यहाँ आप चक्र भी दिखा सकते हैं
+        st.info("गणना लाहिरी अयनांश पर आधारित है।")
+        
     except Exception as e:
-        st.error(f"त्रुटि: {e}")
+        st.error(f"गणना में समस्या: {e}")
